@@ -1,0 +1,187 @@
+---
+title: "EAH"
+author: "Melina Schamberger"
+date: "11/7/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+*1.Cargo las librerias*
+```{r}
+library(tidyverse)
+```
+
+*2.Cargo los datos*
+```{r}
+EAH <- read.csv("https://cdn.buenosaires.gob.ar/datosabiertos/datasets/direccion-general-de-estadisticas-y-censos/encuesta-anual-hogares/encuesta-anual-hogares-2019.csv")
+```
+
+*3.CARACTERTIZACION GENERAL*
+```{r}
+
+#Cantidad de habitantes por comuna
+personasXcomuna <- EAH %>% 
+  group_by(comuna) %>% 
+  summarise(total = n())
+
+#Distribucion por sexo
+sexo <- table(EAH$sexo)
+sexo <- as.data.frame(sexo)
+sexo <- prop.table(sexo)
+
+sexo_comuna <- EAH %>% group_by(comuna, sexo) %>%
+  summarise(total_sexo= n ())
+
+total_comuna<- EAH %>% group_by(comuna) %>%
+  summarise(total = n ())
+
+sexo_final <- total_comuna %>% inner_join(sexo_comuna, "comuna")
+
+sexo_final <- sexo_final %>% group_by(comuna, sexo) %>% 
+                            summarise(porc = total_sexo/total, 
+                                      abs = total_sexo)
+
+
+#Frecuencia de personas que viven en villas de emergencia: el 88% de la poblacion no vive en villas de emergencia.
+villas <- table(EAH$dominio)
+villas <- as.data.frame(prop.table(villas))
+
+#Distribucion de las villas
+villas_comunas <- EAH %>% group_by(comuna) %>%
+        filter(dominio == "Villas de emergencia") %>% 
+        summarise(total = n(),
+                  porcentaje = round((total/1739)*100))
+
+  
+```
+*4. Dimensión Socio-económica*
+```{r}
+#Cantidad de personas por hogar. Tengo 5795 hogares
+
+##DEPENDENCIA POR INGRESOS##
+#Cuantos miembros por hogar dependen de los que tienen ingresos laborales 
+unique(EAH$calidad_ingresos_lab)
+
+hogares_ingreso_lab <- EAH %>% 
+  group_by(id, comuna) %>% 
+  summarise(Total_hogar = n(),
+            Per_con_ingresos = sum(calidad_ingresos_lab == "Tuvo ingresos y declara monto" | 
+                                   calidad_ingresos_lab == "Tuvo ingresos pero no declara monto", 
+                                   na.rm = TRUE),
+            Dependientes = Per_con_ingresos/Total_hogar) %>% 
+  mutate(grado_dependencia = if_else((Dependientes > 0 & Dependientes < 0.20), 
+                                                  "Alta carga de dependencia por ocupado", 
+                                                  "Dependencia no alta"))
+
+#Chequeo por ejemplo hogar 3.             
+EAH %>% filter(id == 3)
+
+# 5 o mas personas por persona que percibe ingresos           
+HOCo3 <- hogares_ingreso_lab
+
+```
+
+
+*4.1. Hogares sin ingresos*
+```{r}
+#Percepcion de ingresos: hogares sin ingresos
+
+unique(EAH$calidad_ingresos_totales)
+
+HOCo3 <- EAH %>% 
+  group_by(id, comuna) %>% 
+  summarise(Total_hogar = n(),
+            Per_con_ingresos = sum(calidad_ingresos_lab == "Tuvo ingresos y declara monto" | 
+                                   calidad_ingresos_lab == "Tuvo ingresos pero no declara monto", 
+                                   na.rm = TRUE),
+            Dependientes = Per_con_ingresos/Total_hogar,
+            personas_sin_ingresos = sum(calidad_ingresos_totales == "No tuvo ingresos" | 
+                                        calidad_ingresos_totales =="No corresponde"),
+            Sin_ingresos = personas_sin_ingresos/Total_hogar) %>% 
+  mutate(grado_dependencia = if_else((Dependientes > 0 & Dependientes < 0.20), 
+                                                  "Alta carga de dependencia por ocupado", 
+                                                  "Dependencia no alta"),
+         percepcion = if_else(Sin_ingresos == 1,
+                                            "No perciben",
+                                                   "Perciben"))
+
+#Chequeo por ejemplo hogar 15.
+EAH %>% filter(id == 15)
+
+
+
+```
+
+*4.2. Asignacion de indice a hogares*
+```{r}
+unique(HOCo3$grado_dependencia)
+
+Construccion_indice <-HOCo3 %>% 
+  mutate(indice_4 = if_else(grado_dependencia == "Alta carga de dependencia por ocupado",
+                                                  0.25,
+                                                  0.00),
+         indice_5 = if_else(Sin_ingresos == 1,
+                                              0.15,
+                                              0.00))
+Construccion_indice <- Construccion_indice [ ,c(1,2,10,11)]
+
+```
+
+
+*5.Cobertura de salud*
+```{r}
+unique(EAH$afiliacion_salud)
+
+Sumatoria <- EAH %>% 
+  group_by(id, comuna) %>% 
+  summarise(Total_hogar = n(),
+            Per_con_ingresos = sum(calidad_ingresos_lab == "Tuvo ingresos y declara monto" | 
+                                   calidad_ingresos_lab == "Tuvo ingresos pero no declara monto", 
+                                   na.rm = TRUE),
+            Dependientes = Per_con_ingresos/Total_hogar,
+            personas_sin_ingresos = sum(calidad_ingresos_totales == "No tuvo ingresos" | 
+                                        calidad_ingresos_totales =="No corresponde"),
+            Sin_ingresos = personas_sin_ingresos/Total_hogar,
+            Cobertura_p = sum(afiliacion_salud == "Solo sistema publico"),
+            Sin_cobertura = Cobertura_p/Total_hogar)%>% 
+  mutate(grado_dependencia = if_else((Dependientes > 0 & Dependientes < 0.20), 
+                                                  "Alta carga de dependencia por ocupado", 
+                                                  "Dependencia no alta"),
+         percepcion = if_else(Sin_ingresos == 1,
+                                            "No perciben",
+                                            "Perciben"),
+         salud = if_else(Sin_cobertura == 1,
+                                          "Salud hogar vulnerable",
+                                          "No vulnerable"))
+
+EAH %>% filter(id == 4)
+
+```
+*5.1. Construcción indice*
+```{r}
+
+Construccion_indice <-Sumatoria %>% 
+  mutate(indice_4 = if_else(grado_dependencia == "Alta carga de dependencia por ocupado",
+                                                  0.25,
+                                                  0.00),
+         indice_5 = if_else(Sin_ingresos == 1,
+                                              0.15,
+                                              0.00),
+         indice_6 = if_else(Sin_cobertura == 1,
+                                              0.15,
+                                              0.00)
+         )
+
+#Me quedo con las variables de interés
+colnames(Construccion_indice)
+Construccion_indice <- Construccion_indice [ ,c(1,2,13:15)]
+
+#Guardo el archivo
+write.csv(Construccion_indice, "const.csv", fileEncoding = "UTF-8")
+
+
+```
+
