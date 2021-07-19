@@ -88,7 +88,7 @@ HOCo3 <- hogares_ingreso_lab
 ```
 
 
-*4.1. Hogares sin ingresos*
+*4.1. Hogares sin ingresos laborales*
 ```{r}
 #Percepcion de ingresos: hogares sin ingresos
 
@@ -134,7 +134,7 @@ Construccion_indice <- Construccion_indice [ ,c(1,2,10,11)]
 ```
 
 
-*5.Cobertura de salud*
+*5.Dimensión: Hogares con cobertura de salud exclusiva del sistema público*
 ```{r}
 unique(EAH$afiliacion_salud)
 
@@ -163,7 +163,8 @@ Sumatoria <- EAH %>%
 EAH %>% filter(id == 4)
 
 ```
-*5.1. Construcción indice*
+
+*5.1. Incorporo la dimensión Salud al indice*
 ```{r}
 
 Construccion_indice <-Sumatoria %>% 
@@ -185,6 +186,55 @@ Construccion_indice <- Construccion_indice [ ,c(1,2,13:15)]
 #Guardo el archivo
 write.csv(Construccion_indice, "const.csv", fileEncoding = "UTF-8")
 
+
+```
+
+*6. Dimensión educación.*
+```{r}
+#Me quedo con los datos de interes y omito los valores nulos.
+anos_educacion<-EAH %>%
+                  select(c(id, comuna, edad, años_escolaridad)) %>% 
+                  filter(edad >= 18)
+
+head(anos_educacion)
+anos_educacion$años_escolaridad<-as.numeric(anos_educacion$años_escolaridad)
+
+
+anos_educacion <- anos_educacion%>%
+                      group_by(id, comuna) %>%
+                      summarise(Promedio = mean(años_escolaridad)) %>% 
+                      mutate(indice_7 = case_when(
+                                                    Promedio < 7 ~ 0.25,
+                                                    Promedio >= 7 & Promedio < 12 ~ 0.10,
+                                                    Promedio >= 12 ~ 0))
+
+#Chequeo por ejemplo hogar 3.
+EAH %>% filter(id == 3)
+
+#Indago resultados
+table(anos_educacion$indice_7)
+
+#Obtengo la media por comuna
+educacion_comuna <- anos_educacion%>%
+                        group_by(comuna)%>%
+                          summarise(indice_7 = mean(indice_7))
+
+
+```
+*6.1. Agrego la dimensión educación al indice*
+```{r}
+
+Construccion_indice <- Construccion_indice %>% 
+                  inner_join(anos_educacion, c("id", "comuna"))
+
+colnames(Construccion_indice)
+
+Construccion_indice <- Construccion_indice [ ,c(1:5,7)]
+
+```
+
+*7.Hacinamiento*
+```{r}
 
 ```
 
