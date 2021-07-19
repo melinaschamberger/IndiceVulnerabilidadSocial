@@ -29,8 +29,8 @@ personasXcomuna <- EAH %>%
 
 #Distribucion por sexo
 sexo <- table(EAH$sexo)
-sexo <- as.data.frame(sexo)
 sexo <- prop.table(sexo)
+sexo <- as.data.frame(sexo)
 
 sexo_comuna <- EAH %>% group_by(comuna, sexo) %>%
   summarise(total_sexo= n ())
@@ -78,6 +78,9 @@ hogares_ingreso_lab <- EAH %>%
 
 #Chequeo por ejemplo hogar 3.             
 EAH %>% filter(id == 3)
+
+#Chequeo por ejemplo hogar 2.             
+EAH %>% filter(id == 2)
 
 # 5 o mas personas por persona que percibe ingresos           
 HOCo3 <- hogares_ingreso_lab
