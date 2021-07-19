@@ -12,6 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 *1.Cargo las librerias*
 ```{r}
 library(tidyverse)
+library(sf)
 ```
 
 *2.Cargo los datos*
@@ -214,12 +215,6 @@ EAH %>% filter(id == 3)
 #Indago resultados
 table(anos_educacion$indice_7)
 
-#Obtengo la media por comuna
-educacion_comuna <- anos_educacion%>%
-                        group_by(comuna)%>%
-                          summarise(indice_7 = mean(indice_7))
-
-
 ```
 *6.1. Agrego la dimensión educación al indice*
 ```{r}
@@ -233,8 +228,76 @@ Construccion_indice <- Construccion_indice [ ,c(1:5,7)]
 
 ```
 
-*7.Hacinamiento*
+*7.Obtengo la media de los indicadores por comuna*
 ```{r}
+#Obtengo la media por comuna
+
+Construccion_indice <- Construccion_indice %>%
+                        group_by(comuna) %>% 
+                          summarise(indice_4 = mean(indice_4),
+                                    indice_5 = mean(indice_5),
+                                    indice_6 = mean(indice_6),
+                                    indice_7 = mean(indice_7, na.rm = T))
+
+```
+*8. Incorporo hacinamiento*
+```{r}
+hacinamiento <- data.frame(comuna = 1:15, indice_h = c(0.282666667,
+                                                       0.008666667,
+                                                       0.031666667,
+                                                       0.236333333,
+                                                       0.022,
+                                                       0.011333333,
+                                                       0.03,
+                                                       0.238,
+                                                       0.025666667,
+                                                       0.021333333,
+                                                       0.013,
+                                                       0,
+                                                       0,
+                                                       0,
+                                                       0.013))
+
+#Incorporo al indice la media del indicador para cada comuna.
+Construccion_indice <- Construccion_indice %>% 
+                  inner_join(hacinamiento, "comuna")
+
+```
+
+
+*9.Sumo los valores de cada comuna*
+```{r}
+Construccion_indice <-Construccion_indice%>%
+                    mutate(indice_T=(indice_4+indice_5+indice_6+indice_7+indice_h))
+
+```
+
+*10. Construyo mapa para ver distribucion.*
+```{r}
+#Traigo los datos de las comunas
+caba<-st_read("https://cdn.buenosaires.gob.ar/datosabiertos/datasets/comunas/CABA_comunas.geojson")
+
+
+caba <- caba%>%
+          rename(comuna=COMUNAS)%>%
+          select(comuna, geometry)
+
+caba$comuna<-as.character(caba$comuna)
+Construccion_indice$comuna <- as.character(Construccion_indice$comuna)
+
+
+Construccion_indice <-left_join(x=caba, y=Construccion_indice)
+
+Construccion_indice<-Construccion_indice%>%
+                            mutate(centroide=st_centroid(geometry))
+
+
+#Mapeo
+
+prelim1<-ggplot()+
+  geom_sf(data=Construccion_indice, 
+          aes(fill=indice_T))+
+  scale_fill_viridis_b()
 
 ```
 
