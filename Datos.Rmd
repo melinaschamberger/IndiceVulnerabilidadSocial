@@ -185,7 +185,7 @@ colnames(Construccion_indice)
 Construccion_indice <- Construccion_indice [ ,c(1,2,13:15)]
 
 #Guardo el archivo
-write.csv(Construccion_indice, "const.csv", fileEncoding = "UTF-8")
+#write.csv(Construccion_indice, "const.csv", fileEncoding = "UTF-8")
 
 
 ```
@@ -228,7 +228,200 @@ Construccion_indice <- Construccion_indice [ ,c(1:5,7)]
 
 ```
 
-*7.Obtengo la media de los indicadores por comuna*
+*7.Agrego hacinamiento*
+```{r}
+#Comuna 1
+c1_critico <- data.frame(i = 1:181, hac = 0.10)
+c1_moderado <- data.frame(i = 1:59, hac = 0.15)
+c1_sin <- data.frame(i = 1:1025, hac = 0)
+c1 <- rbind(c1_moderado, c1_critico, c1_sin)
+
+c1 <- EAH %>% 
+              filter(comuna ==1) %>%
+              summarise(id = id, 
+                        comuna = comuna) %>% 
+              mutate(hac = c1$hac)
+
+#Comuna 2
+c2_moderado <- data.frame(i = 1:20, hac = 0.15)
+c2_sin <- data.frame(i = 1:745, hac = 0)
+c2 <- rbind(c2_moderado, c2_sin)
+
+c2 <- EAH %>% 
+              filter(comuna == 2) %>%
+              summarise(id = id, 
+                        comuna = comuna) %>% 
+              mutate(hac = c2$hac)
+
+#Comuna 3
+c3_moderado <- data.frame(i = 1:86, hac = 0.15)
+c3_sin <- data.frame(i = 1:820, hac = 0)
+c3 <- rbind(c3_moderado, c3_sin)
+
+c3 <- EAH %>% 
+              filter(comuna == 3) %>%
+              summarise(id = id, 
+                        comuna = comuna) %>% 
+              mutate(hac = c3$hac)
+
+#Comuna 4
+c4_critico <- data.frame(i = 1:51, hac = 0.10)
+c4_moderado <- data.frame(i = 1:161, hac = 0.15)
+c4_sin <- data.frame(i = 1:1088, hac = 0)
+c4 <- rbind(c4_moderado, c4_critico, c4_sin)
+
+c4 <- EAH %>% 
+              filter(comuna ==4) %>%
+              summarise(id = id, 
+                        comuna = comuna) %>% 
+              mutate(hac = c4$hac)
+
+#Comuna 5
+c5_moderado <- data.frame(i = 1:54, hac = 0.15)
+c5_sin <- data.frame(i = 1:764, hac = 0)
+c5 <- rbind(c5_moderado, c5_sin)
+
+c5 <- EAH %>% 
+              filter(comuna == 5) %>%
+              summarise(id = id, 
+                        comuna = comuna) %>% 
+              mutate(hac = c5$hac)
+
+#Comuna 6
+c6_moderado <- data.frame(i = 1:26, hac = 0.15)
+c6_sin <- data.frame(i = 1:729, hac = 0)
+c6 <- rbind(c6_moderado, c6_sin)
+
+c6 <- EAH %>% 
+              filter(comuna == 6) %>%
+              summarise(id = id, 
+                        comuna = comuna) %>% 
+              mutate(hac = c6$hac)
+
+#Comuna 7
+c7_moderado <- data.frame(i = 1:100, hac = 0.15)
+c7_sin <- data.frame(i = 1:1016, hac = 0)
+c7 <- rbind(c7_moderado, c7_sin)
+
+c7 <- EAH %>% 
+              filter(comuna == 7) %>%
+              summarise(id = id, 
+                        comuna = comuna) %>% 
+              mutate(hac = c7$hac)
+
+#Comuna 8
+c8_critico <- data.frame(i = 1:285, hac = 0.10)
+c8_moderado <- data.frame(i = 1:59, hac = 0.15)
+c8_sin <- data.frame(i = 1:1296, hac = 0)
+c8 <- rbind(c8_moderado, c8_critico, c8_sin)
+
+c8 <- EAH %>% 
+              filter(comuna ==8) %>%
+              summarise(id = id, 
+                        comuna = comuna) %>% 
+              mutate(hac = c8$hac)
+
+#Comuna 9
+c9_moderado <- data.frame(i = 1:74, hac = 0.15)
+c9_sin <- data.frame(i = 1:893, hac = 0)
+c9 <- rbind(c9_moderado, c9_sin)
+
+c9 <- EAH %>% 
+              filter(comuna == 9) %>%
+              summarise(id = id, 
+                        comuna = comuna) %>% 
+              mutate(hac = c9$hac)
+
+
+#Comuna 10
+c10_moderado <- data.frame(i = 1:49, hac = 0.15)
+c10_sin <- data.frame(i = 1:716, hac = 0)
+c10 <- rbind(c10_moderado, c10_sin)
+
+c10 <- EAH %>% 
+              filter(comuna == 10) %>%
+              summarise(id = id, 
+                        comuna = comuna) %>% 
+              mutate(hac = c10$hac)
+
+#Comuna 11
+c11_moderado <- data.frame(i = 1:28, hac = 0.15)
+c11_sin <- data.frame(i = 1:700, hac = 0)
+c11 <- rbind(c11_moderado, c11_sin)
+
+c11 <- EAH %>% 
+              filter(comuna == 11) %>%
+              summarise(id = id, 
+                        comuna = comuna) %>% 
+              mutate(hac = c11$hac)
+
+#Comuna 12
+c12_sin <- data.frame(i = 1:801, hac = 0)
+c12 <- c12_sin
+
+c12 <- EAH %>% 
+              filter(comuna == 12) %>%
+              summarise(id = id, 
+                        comuna = comuna) %>% 
+              mutate(hac = c12$hac)
+
+#Comuna 13
+c13_sin <- data.frame(i = 1:833, hac = 0)
+c13 <- c13_sin
+
+c13 <- EAH %>% 
+              filter(comuna == 13) %>%
+              summarise(id = id, 
+                        comuna = comuna) %>% 
+              mutate(hac = c13$hac)
+
+
+#Comuna 14
+c14_sin <- data.frame(i = 1:847, hac = 0)
+c14 <- c14_sin
+
+c14 <- EAH %>% 
+              filter(comuna == 14) %>%
+              summarise(id = id, 
+                        comuna = comuna) %>% 
+              mutate(hac = c14$hac)
+
+#Comuna 15
+c15_moderado <- data.frame(i = 1:32, hac = 0.15)
+c15_sin <- data.frame(i = 1:781, hac = 0)
+c15 <- rbind(c15_moderado, c15_sin)
+
+c15 <- EAH %>% 
+              filter(comuna == 15) %>%
+              summarise(id = id, 
+                        comuna = comuna) %>% 
+              mutate(hac = c15$hac)
+
+#Junto los valores de todas las comunas
+hacinamiento_individual <- rbind(c1, c2, c3, c4, c5,
+                                 c6, c7, c8, c9, c10,
+                                 c11, c12, c13, c14, c15)
+
+#Me quedo con los valores por hogar
+prueba <- hacinamiento_individual %>%
+                    group_by(id) %>%
+                    summarise(Total_hogar = n(),
+                              hac = (sum(hac))/Total_hogar) %>% 
+                    mutate(id = id)
+
+#Incorporo hacinamiento por hogar al indice
+Construccion_indice <- Construccion_indice %>% 
+                  inner_join(prueba, "id")
+
+
+#Me quedo con las variables de interés
+colnames(Construccion_indice)
+Construccion_indice <- Construccion_indice [ ,c(1:6,8)]
+
+```
+
+
+*8.Obtengo la media de los indicadores por comuna*
 ```{r}
 #Obtengo la media por comuna
 
@@ -237,10 +430,11 @@ Construccion_indice <- Construccion_indice %>%
                           summarise(indice_4 = mean(indice_4),
                                     indice_5 = mean(indice_5),
                                     indice_6 = mean(indice_6),
-                                    indice_7 = mean(indice_7, na.rm = T))
+                                    indice_7 = mean(indice_7, na.rm = T),
+                                    indice_8 = mean(hac))
 
 ```
-*8. Incorporo hacinamiento*
+*Este paso puedo obviarlo al tener valor de hacinamiento por hogar*
 ```{r}
 hacinamiento <- data.frame(comuna = 1:15, indice_h = c(0.282666667,
                                                        0.008666667,
@@ -268,7 +462,7 @@ Construccion_indice <- Construccion_indice %>%
 *9.Sumo los valores de cada comuna*
 ```{r}
 Construccion_indice <-Construccion_indice%>%
-                    mutate(indice_T=(indice_4+indice_5+indice_6+indice_7+indice_h))
+                    mutate(indice_T=(indice_4+indice_5+indice_6+indice_7+indice_8))
 
 ```
 
@@ -300,4 +494,6 @@ prelim1<-ggplot()+
   scale_fill_viridis_b()
 
 ```
+
+
 
