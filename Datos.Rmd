@@ -493,6 +493,7 @@ prelim1<-ggplot()+
           aes(fill=indice_T))+
   scale_fill_viridis_b()
 
+prelim1
 ```
 
 
