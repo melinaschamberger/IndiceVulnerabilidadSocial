@@ -5,9 +5,6 @@ library(RColorBrewer)
 library(sf)
 library(patchwork)
 
-install.packages("installr", dependencies = TRUE)
-library(installr)
-updateR()
 
 # Analisis de la dimensión salud
 Salud <- read.csv("IVS.csv")
