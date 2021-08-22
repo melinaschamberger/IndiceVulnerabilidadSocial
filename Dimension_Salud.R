@@ -2,16 +2,11 @@ library(tidyverse)
 library(viridis)
 library(hrbrthemes)
 library(RColorBrewer)
-library(plotly)
 library(sf)
 library(patchwork)
-display.brewer.all(type = "qual")
-hrbrthemes::import_titillium_web()
+
 
 # Analisis de la dimensión salud
-
-rm(list = ls())
-
 Salud <- read.csv("IVS.csv")
 colnames(Salud)
 
@@ -41,11 +36,8 @@ Barras <- Salud %>%
             vjust = -0.25,
             size = 2.8,
             fontface = "italic") +
-  labs(title = "Índice de vulnerabilidad de salud por comuna. ",
-       subtitle = "CABA, 2019. ",
-       x = "Comunas",
+  labs(x = "Comunas",
        y = "Media",
-       caption = "Fuente: elaborado en base a datos de EPH (2019).",
         fill = "Zona") +
   scale_fill_manual(values = c("#219ebc", "#023047", "#ffb703", "#fb8500")) +
   theme_ipsum_tw()+
@@ -53,7 +45,6 @@ Barras <- Salud %>%
                                    hjust= 1,
                                    vjust = 0.2, 
                                    size = 8),
-        plot.title = element_text(size=14, face = "bold.italic"),
         axis.text.y = element_text(size = 8),
         legend.title = element_text(size = 8))
 
@@ -70,16 +61,34 @@ Salud$comuna <- as.character(Salud$comuna)
 Salud <-left_join(x=caba, y=Salud)
 Salud <- Salud %>% mutate(centroide = st_centroid(geometry))
 
+Salud <- Salud %>% mutate(long = unlist(map(Salud$centroide, 1)),
+                            lat = unlist(map(Salud$centroide,2)))
+
+head(Salud)
+
 #Mapeo
 media_salud<-ggplot() +
-              geom_sf(data=Salud, 
-              aes(fill=media))+
-              scale_fill_viridis_b()
-plot_media
+              geom_sf(data=Salud, aes(fill=zona)) +
+              #scale_fill_viridis(option = "C", alpha = .4) +
+              scale_fill_manual(values = c("#219ebc", "#023047", "#ffb703", "#fb8500")) +
+              geom_text(data =Salud, aes(x = long, y = lat, label = comuna)) +
+              geom_sf_label(data = Salud, aes(label = media),
+                            size = 3,
+                            vjust = 0.8) +
+              theme(axis.text.x = element_text(angle = 90, 
+                                   hjust= 1,
+                                   vjust = 0.2, 
+                                   size = 8),
+              axis.text.y = element_text(size = 8),
+              legend.position = 'none')
 
 
-(media_salud / Barras)
-
-
-
-
+graficos_combinados <- (media_salud | Barras) +
+                        plot_annotation(title = "Índice de vulnerabilidad de salud por comuna. ",
+                                        subtitle = "CABA, 2019. ",
+                                        caption = "Fuente: elaborado en base a datos de EPH (2019).") +
+                        theme(plot.title = element_text(size=14, face = "bold.italic"),
+                              plot.subtitle = element_text(size = 14), 
+                              plot.caption = element_text(size = 14)) +
+                        theme_ipsum_tw()
+                                        
