@@ -138,6 +138,7 @@ Construccion_indice <-Sumatoria %>%
          )
 
 Construccion_indice<-Construccion_indice[,c(1,2,15:19)]
+write.csv(Construccion_indice, "IVS.csv", fileEncoding = "UTF-8")
 ```
 
 *5.1 UNIFICAMOS*

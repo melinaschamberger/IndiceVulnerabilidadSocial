@@ -60,7 +60,7 @@ villas_comunas <- EAH %>% group_by(comuna) %>%
 ```
 *4. Dimensión Socio-económica*
 ```{r}
-#Cantidad de personas por hogar. Tengo 5795 hogares
+#Cantidad de personas por hogar. Total 5795 hogares
 
 ##DEPENDENCIA POR INGRESOS##
 #Cuantos miembros por hogar dependen de los que tienen ingresos laborales 
