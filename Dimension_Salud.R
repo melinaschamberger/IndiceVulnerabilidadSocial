@@ -5,13 +5,17 @@ library(RColorBrewer)
 library(sf)
 library(patchwork)
 
+install.packages("installr", dependencies = TRUE)
+library(installr)
+updateR()
 
 # Analisis de la dimensión salud
 Salud <- read.csv("IVS.csv")
 colnames(Salud)
 
 #Me quedo con variables de interes.
-Salud <- Salud %>% select( ,c(2,3,7))
+Salud <- Salud %>% 
+  select( ,c(2,3,7))
 
 Salud %<>% group_by(comuna) %>% 
             mutate(media = round(mean(ind_salud),4),
@@ -71,16 +75,19 @@ media_salud<-ggplot() +
               geom_sf(data=Salud, aes(fill=zona)) +
               #scale_fill_viridis(option = "C", alpha = .4) +
               scale_fill_manual(values = c("#219ebc", "#023047", "#ffb703", "#fb8500")) +
-              geom_text(data =Salud, aes(x = long, y = lat, label = comuna)) +
-              geom_sf_label(data = Salud, aes(label = media),
+              geom_text(data =Salud, aes(x = long, y = lat, label = media),
+                        size = 3) +
+              geom_sf_label(data = Salud, aes(label = comuna),
                             size = 3,
-                            vjust = 0.8) +
+                            vjust = -0.6) +
               theme(axis.text.x = element_text(angle = 90, 
                                    hjust= 1,
                                    vjust = 0.2, 
                                    size = 8),
               axis.text.y = element_text(size = 8),
-              legend.position = 'none')
+              legend.position = 'none')  +
+              xlab(" ") +
+              ylab (" ")
 
 
 graficos_combinados <- (media_salud | Barras) +
@@ -91,4 +98,4 @@ graficos_combinados <- (media_salud | Barras) +
                               plot.subtitle = element_text(size = 14), 
                               plot.caption = element_text(size = 14)) +
                         theme_ipsum_tw()
-                                        
+
