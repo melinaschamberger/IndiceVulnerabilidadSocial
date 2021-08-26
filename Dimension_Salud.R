@@ -88,6 +88,8 @@ head(Salud)
 #Mapeo
 mapa_simple <-  Salud %>% st_simplify(dTolerance = 1e-03)
 
+
+
 #Creo tema para el mapa
 theme_custom_map <- function(base_size = 11,
                              base_family = "",
@@ -106,8 +108,8 @@ theme_custom_map <- function(base_size = 11,
 
 #mapa
 
-# Dispositivo PNG
-png("mi_plot.png")
+ggplot() +
+  geom_sf(data=Salud, aes(fill=media))
 
 # Código
 
