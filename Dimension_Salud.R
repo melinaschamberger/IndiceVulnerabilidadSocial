@@ -5,7 +5,9 @@ library(hrbrthemes)
 library(sf)
 library(patchwork)
 library(ggplot2)
-
+library(grDevices)
+#Apagar geometria de los datos
+sf::sf_use_s2(FALSE)
 
 # Analisis de la dimensión salud
 Salud <- read.csv("IVS.csv")
@@ -36,19 +38,29 @@ Barras <- Salud %>%
            show.legend = T) +
   geom_text(aes(label= media),
             vjust = -0.25,
-            size = 2.8,
-            fontface = "italic") +
+            size = 2.5,
+            face = "italic") +
   labs(x = "Comunas",
-       y = "Media",
-        fill = "Zona") +
+       y = " ",
+        fill = "Zona",
+       title = "Distribución de hogares con vulnerabilidad en salud",
+       caption = "Fuente: elaborado en base a datos de EPH (2019). ",
+       subtitle = "CABA, 2019") +
   scale_fill_manual(values = c("#219ebc", "#023047", "#ffb703", "#fb8500")) +
   theme_ipsum_tw()+
   theme(axis.text.x = element_text(angle = 90, 
                                    hjust= 1,
                                    vjust = 0.2, 
-                                   size = 8),
+                                   size = 8,
+                                   face = "italic"),
+        plot.title = element_text(size = 12, face = "bold"),
+        plot.subtitle = element_text(size =10, face = "italic"),
+        legend.title = element_text(size = 8, face = "italic"),
         axis.text.y = element_text(size = 8),
-        legend.title = element_text(size = 8))
+        legend.position = "bottom", 
+        legend.box = "horizontal", 
+        legend.text = element_text(face = "italic"),
+        plot.caption = element_text(size = 7, hjust = 1))
 
 #Mapa
 #Datos
@@ -56,12 +68,17 @@ caba<-st_read("https://cdn.buenosaires.gob.ar/datosabiertos/datasets/comunas/CAB
 caba <- caba%>%
   rename(comuna=COMUNAS)%>%
   select(comuna, geometry)
-caba$comuna<-as.character(caba$comuna)
 
 #Uno datos
-Salud$comuna <- as.character(Salud$comuna)
+caba$comuna<-as.numeric(caba$comuna)
+head(caba)
+
+Salud$comuna <- as.numeric(Salud$comuna)
+head(Salud)
+
 Salud <-left_join(x=caba, y=Salud)
-Salud <- Salud %>% mutate(centroide = st_centroid(geometry))
+Salud <-Salud %>%
+              mutate(centroide=st_centroid(geometry))
 
 Salud <- Salud %>% mutate(long = unlist(map(Salud$centroide, 1)),
                             lat = unlist(map(Salud$centroide,2)))
@@ -69,24 +86,49 @@ Salud <- Salud %>% mutate(long = unlist(map(Salud$centroide, 1)),
 head(Salud)
 
 #Mapeo
+mapa_simple <-  Salud %>% st_simplify(dTolerance = 1e-03)
+
+#Creo tema para el mapa
+theme_custom_map <- function(base_size = 11,
+                             base_family = "",
+                             base_line_size = base_size / 22,
+                             base_rect_size = base_size / 22) {
+  theme_bw(base_size = base_size, 
+           base_family = base_family,
+           base_line_size = base_line_size) %+replace%
+    theme(
+      axis.title = element_blank(), 
+      axis.text = element_blank(),
+      axis.ticks = element_blank(),
+      complete = TRUE
+    )
+}
+
+#mapa
+
+# Dispositivo PNG
+png("mi_plot.png")
+
+# Código
+
 media_salud<-ggplot() +
-              geom_sf(data=Salud, aes(fill=zona)) +
-              scale_fill_manual(values = c("#219ebc", "#023047", "#ffb703", "#fb8500")) +
-              geom_text(data =Salud, aes(x = long, y = lat, label = comuna), size = 3) +
-              xlab(NULL) +
-              ylab (NULL) +
-              theme(axis.text.x = element_text(size = 8),
-                    axis.text.y = element_text(size = 8)) +
-              theme_minimal() +
-              theme(legend.position = 'none')
+              geom_sf(data=mapa_simple, aes(fill=media)) +
+              theme_custom_map() +
+              geom_sf(color = "black", size = 0.1) +
+              scale_fill_gradientn (colours = rev(grDevices::heat.colors(10)), name = NULL) +
+              geom_text(data = mapa_simple, aes(x = long, y = lat, label = comuna), size = 3) +
+              labs(title = "Distribución de hogares según índice de vulnerabilidad en salud",
+                   subtitle = "CABA, 2019",
+                   caption = "Fuente: elaborado en base a datos de EPH (2019).") +
+              theme(title = element_text(size=10, face = "bold"),
+                    plot.subtitle = element_text(size = 8), 
+                    plot.caption = element_text(size = 7, hjust = 1),
+                    plot.caption.position = "panel",
+                    legend.position = "bottom")
 
 
-graficos_combinados <- (media_salud | Barras) +
-                        plot_annotation(title = "Índice de vulnerabilidad de salud por comuna. ",
-                                        subtitle = "CABA, 2019. ",
-                                        caption = "Fuente: elaborado en base a datos de EPH (2019).") +
-                        theme(plot.title = element_text(size=18, face = "bold"),
-                              plot.subtitle = element_text(size = 14), 
-                              plot.caption = element_text(size = 14)) +
-                        theme_ipsum_tw()
+#Segun zonas
+              media_salud +
+                facet_wrap("zona", ncol = 2)
+              
 

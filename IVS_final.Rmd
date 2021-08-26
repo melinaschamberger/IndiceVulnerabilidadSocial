@@ -13,6 +13,8 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 library(tidyverse)
 library(sf)
+library(ggplot2)
+library(viridis)
 ```
 
 *2.Cargo los datos*
@@ -159,8 +161,12 @@ caba<-st_read("https://cdn.buenosaires.gob.ar/datosabiertos/datasets/comunas/CAB
 caba <- caba%>%
           rename(comuna=COMUNAS)%>%
           select(comuna, geometry)
-caba$comuna<-as.character(caba$comuna)
-ivs_x_comuna$comuna <- as.character(ivs_x_comuna$comuna)
+caba$comuna<-as.numeric(caba$comuna)
+head(caba)
+
+ivs_x_comuna$comuna <- as.numeric(ivs_x_comuna$comuna)
+head(ivs_x_comuna)
+
 ivs_x_comuna <-left_join(x=caba, y=ivs_x_comuna)
 ivs_x_comuna<-ivs_x_comuna%>%
                             mutate(centroide=st_centroid(geometry))
