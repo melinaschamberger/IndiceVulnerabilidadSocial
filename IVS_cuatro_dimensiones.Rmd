@@ -1,0 +1,499 @@
+---
+título: "Indice: todas las dimensiones."
+autor: "Melina Schamberger & Ignacio Gomar"
+fecha: "20/7/2021"
+salida: html_document
+---
+
+```{r}
+knitr :: opts_chunk $ set (echo = TRUE)
+```
+
+*1.Cargo las librerias *
+```{r}
+library (tidyverse)
+library (sf)
+library (openxlsx)
+```
+
+
+*2.Cargo los datos*
+```{r}
+EAH <- read.csv("https://cdn.buenosaires.gob.ar/datosabiertos/datasets/direccion-general-de-estadisticas-y-censos/encuesta-anual-hogares/encuesta-anual-hogares-2019.csv")
+```
+
+
+*3.CARACTERTIZACION GENERAL *
+```{r}
+#Cantidad de encuestades por comuna
+personasXcomuna <- EAH %>% 
+  group_by(comuna) %>% 
+  summarise(total = n())
+#Distribucion por sexo
+sexo <- table(EAH$sexo)
+sexo <- prop.table(sexo)
+sexo <- as.data.frame(sexo)
+sexo_comuna <- EAH %>% group_by(comuna, sexo) %>%
+  summarise(total_sexo= n ())
+total_comuna<- EAH %>% group_by(comuna) %>%
+  summarise(total = n ())
+sexo_final <- total_comuna %>% inner_join(sexo_comuna, "comuna")
+sexo_final <- sexo_final %>% group_by(comuna, sexo) %>% 
+                            summarise(porc = total_sexo/total, 
+                                      abs = total_sexo)
+ggplot(sexo_final)+
+  geom_col(aes(x=as.character(comuna), y=porc, fill=sexo))+
+  scale_fill_manual(values = c("#eb8023", "#5d09ed"))+
+  geom_hline(yintercept=0.5, linetype="dashed", color="red")+
+  theme_dark()
+             
+#Frecuencia de personas que viven en villas de emergencia: el 88% de la poblacion no vive en villas de emergencia.
+villas <- table(EAH$dominio)
+view(villas)
+villas <- as.data.frame(prop.table(villas))
+#Distribucion de las villas
+villas_comunas <- EAH %>% group_by(comuna) %>%
+        filter(dominio == "Villas de emergencia") %>% 
+        summarise(total = n(),
+                  porcentaje = round((total/1739)*100))
+ggplot(villas_comunas)+
+  geom_col(aes(x=reorder(as.character(comuna),porcentaje), y=porcentaje), width = 0.5)
+
+#edades
+```
+
+
+*4. CONSTRUIMOS DIMENSIONES *
+```{r}
+Sumatoria<-EAH%>%group_by(id, comuna,dominio) %>% 
+  summarise(Total_hogar = n(),
+            Per_con_ingresos = sum(calidad_ingresos_lab == "Tuvo ingresos y declara monto" | 
+                                   calidad_ingresos_lab == "Tuvo ingresos pero no declara monto", 
+                                   na.rm = TRUE),
+            Dependientes = Per_con_ingresos/Total_hogar,
+            personas_sin_ingresos = sum(calidad_ingresos_totales == "No tuvo ingresos" | 
+                                        calidad_ingresos_totales =="No corresponde"),
+            Sin_ingresos = personas_sin_ingresos/Total_hogar,
+            Cobertura_p = sum(afiliacion_salud == "Solo sistema publico"),
+            Sin_cobertura = Cobertura_p/Total_hogar)%>% 
+  mutate(grado_dependencia = if_else((Dependientes > 0 & Dependientes < 0.20), 
+                                                  "Alta carga de dependencia por ocupado", 
+                                                  "Dependencia no alta"),
+         percepcion = if_else(Sin_ingresos == 1,
+                                            "No perciben",
+                                            "Perciben"),
+         salud = if_else(Sin_cobertura == 1,
+                                          "Salud hogar vulnerable",
+                                          "No vulnerable"),
+         dominio=if_else(dominio== "Resto de la Ciudad",0,
+                         0.15))
+```
+
+*4.1 AGREGAMOS EDUCACION*
+```{r}
+anos_educacion<-EAH %>%
+                  select(c(id, comuna, edad, años_escolaridad)) %>% 
+                  filter(edad >= 18)
+head(anos_educacion)
+anos_educacion$años_escolaridad<-as.numeric(anos_educacion$años_escolaridad)
+anos_educacion <- anos_educacion%>%
+                      group_by(id, comuna) %>%
+                      summarise(educacion = mean(años_escolaridad)) 
+
+Sumatoria<-Sumatoria%>%inner_join(anos_educacion, c("id", "comuna"), na.omit=TRUE)
+```
+
+
+* 4.1 AGREGAMOS EDUCACION *
+```{r}
+anos_educacion <-EAH%>%
+                  select (c (id, comuna, edad, años_escolaridad))%>% 
+                  filtro (edad> = 18)
+cabeza (anos_educacion)
+anos_educacion $ años_escolaridad <-as.numeric (anos_educacion $ años_escolaridad)
+anos_educacion <- anos_educacion%>%
+                      group_by (id, comuna)%>%
+                      resumir (educacion = mean (años_escolaridad)) 
+
+Sumatoria <-Sumatoria%>% inner_join (anos_educacion, c ("id", "comuna"), na.omit = TRUE)
+```
+
+
+*4.2 CALCULAMOS HACINAMIENTO *
+```{r}
+
+hacinamiento<-read.xlsx("personas_x_ambiente_x_comuna.xlsx", na.strings = "-")
+head(hacinamiento)
+hacinamiento<-hacinamiento%>%filter(Comuna!="Total")
+view(hacinamiento)
+
+#Comuna 1
+c1<-Sumatoria%>%filter(comuna==1)
+484*(0.047)
+c1_critico <- data.frame(i = 1:23, hac = 0.15)
+484*0.143
+c1_moderado <- data.frame(i = 1:69, hac = 0.10)
+484*(0.379+0.431)
+c1_sin <- data.frame(i = 1:392, hac = 0)
+#rm(c1)
+hac1 <- rbind(c1_moderado, c1_critico, c1_sin)
+c1<-c1%>%cbind(hac1)%>%
+  select(id, hac)
+rm(c1_critico, c1_moderado, c1_sin, hac1)
+
+
+#Comuna 2
+c2<-Sumatoria%>%filter(comuna==2)
+382*0.026
+c2_moderado <- data.frame(i = 1:10, hac = 0.10)
+382*(0.667+0.306)
+c2_sin <- data.frame(i = 1:371, hac = 0)
+c2_critico <- data.frame(i = 1, hac = 0.15)
+hac2 <- rbind(c2_moderado, c2_sin, c2_critico)
+c2<-c2%>%cbind(hac2)%>%
+  select(id, hac)
+rm(c2_critico, c2_moderado, c2_sin, hac2)
+
+#Comuna 3
+c3<-Sumatoria%>%filter(comuna==3)
+410*0.095
+c3_moderado <- data.frame(i = 1:39, hac = 0.1)
+410*(0.408+0.487)
+c3_sin <- data.frame(i = 1:367, hac = 0)
+410*0.01
+c3_critico<-data.frame(i=1:4, hac= 0.15)
+hac3 <- rbind(c3_moderado, c3_sin, c3_critico)
+c3<-c3%>%cbind(hac3)%>%
+  select(id, hac)
+rm(c3_critico, c3_moderado, c3_sin, hac3)
+
+#Comuna 4
+c4<-Sumatoria%>%filter(comuna==4)
+487*0.039
+c4_critico <- data.frame(i = 1:19, hac = 0.15)
+487*0.124
+c4_moderado <- data.frame(i = 1:61, hac = 0.1)
+487*(0.327+0.509)
+c4_sin <- data.frame(i = 1:407, hac = 0)
+hac4 <- rbind(c4_moderado, c4_critico, c4_sin)
+c4<-c4%>%cbind(hac4)%>%
+  select(id, hac)
+rm(c4_critico, c4_moderado, c4_sin, hac4)
+
+#Comuna 5
+c5<-Sumatoria%>%filter(comuna==5)
+378*0.066
+c5_moderado <- data.frame(i = 1:25, hac = 0.1)
+378*(0.559+0.362)
+c5_sin <- data.frame(i = 1:348, hac = 0)
+378*0.013
+c5_critico <- data.frame(i=1:5, hac = 0.15)
+hac5 <- rbind(c5_moderado, c5_sin, c5_critico)
+c5<-c5%>%cbind(hac5)%>%
+  select(id, hac)
+rm(c5_critico, c5_moderado, c5_sin, hac5)
+
+#Comuna 6
+c6<-Sumatoria%>%filter(comuna==6)
+344*0.034
+c6_moderado <- data.frame(i = 1:12, hac = 0.1)
+c6_sin <- data.frame(i = 1:332, hac = 0)
+hac6 <- rbind(c6_moderado, c6_sin)
+c6<-c6%>%cbind(hac6)%>%
+  select(id, hac)
+rm(c6_moderado, c6_sin, hac6)
+
+#Comuna 7
+c7<-Sumatoria%>%filter(comuna==7)
+406*0.09
+c7_moderado <- data.frame(i = 1:36, hac = 0.1)
+406*0.022
+c7_critico<- data.frame(i=1:9, hac=0.15)
+406*(0.478+0.41)
+c7_sin <- data.frame(i = 1:361, hac = 0)
+hac7 <- rbind(c7_critico, c7_moderado, c7_sin)
+c7<-c7%>%cbind(hac7)%>%
+  select(id, hac)
+rm(c7_critico,c7_moderado, c7_sin, hac7)
+
+#Comuna 8
+c8<-Sumatoria%>%filter(comuna==8)
+507*0.036
+c8_critico <- data.frame(i = 1:18, hac = 0.15)
+507*0.174
+c8_moderado <- data.frame(i = 1:88, hac = 0.1)
+507*(0.271+0.52)
+c8_sin <- data.frame(i = 1:401, hac = 0)
+hac8 <- rbind(c8_moderado, c8_critico, c8_sin)
+c8<-c8%>%cbind(hac8)%>%
+  select(id, hac)
+rm(c8_critico,c8_moderado, c8_sin, hac8)
+
+#Comuna 9
+c9<-Sumatoria%>%filter(comuna==9)
+331*0.003
+c9_critico <- data.frame(i=1:1, hac= 0.15)
+331*0.077
+c9_moderado <- data.frame(i = 1:25, hac = 0.1)
+331*(0.492+0.428)
+c9_sin <- data.frame(i = 1:305, hac = 0)
+hac9 <- rbind(c9_critico,c9_moderado, c9_sin)
+c9<-c9%>%cbind(hac9)%>%
+  select(id, hac)
+rm(c9_critico,c9_moderado, c9_sin, hac9)
+
+#Comuna 10
+c10<-Sumatoria%>%filter(comuna==10)
+320*0.003
+c10_critico <- data.frame(i = 1:1, hac = 0.15)
+320*0.064
+c10_moderado <- data.frame(i = 1:20, hac = 0.1)
+320*(0.451+0.482)
+c10_sin <- data.frame(i = 1:299, hac = 0)
+hac10 <- rbind(c10_critico,c10_moderado, c10_sin)
+c10<-c10%>%cbind(hac10)%>%
+  select(id, hac)
+rm(c10_critico,c10_moderado, c10_sin, hac10)
+
+#Comuna 11
+c11<-Sumatoria%>%filter(comuna==11)
+310*0.003
+c11_critico <- data.frame(i = 1:1, hac = 0.15)
+310*0.039
+c11_moderado <- data.frame(i = 1:12, hac = 0.1)
+310*(0.547+ 0.411)
+c11_sin <- data.frame(i = 1:297, hac = 0)
+hac11 <- rbind(c11_critico, c11_moderado, c11_sin)
+c11<-c11%>%cbind(hac11)%>%
+  select(id, hac)
+rm(c11_critico,c11_moderado, c11_sin, hac11)
+
+#Comuna 12
+c12<-Sumatoria%>%filter(comuna==12)
+326*(0.54+0.423)
+c12_sin <- data.frame(i = 1:326, hac = 0)
+hac12 <- c12_sin
+c12<-c12%>%cbind(hac12)%>%
+  select(id, hac)
+rm(c12_sin, hac12)
+
+#Comuna 13
+c13<-Sumatoria%>%filter(comuna==13)
+c13_sin <- data.frame(i = 1:378, hac = 0)
+hac13 <- c13_sin
+c13<-c13%>%cbind(hac13)%>%
+  select(id, hac)
+rm(c13_sin, hac13)
+
+#Comuna 14
+c14<-Sumatoria%>%filter(comuna==14)
+c14_sin <- data.frame(i = 1:393, hac = 0)
+hac14 <- c14_sin
+c14<-c14%>%cbind(hac14)%>%
+  select(id, hac)
+rm(c14_sin, hac14)
+
+#Comuna 15
+c15<-Sumatoria%>%filter(comuna==15)
+339*0.008
+c15_critico <- data.frame(i=1:3, hac=0.15)
+339*0.039
+c15_moderado <- data.frame(i = 1:13, hac = 0.1)
+339*(0.531 + 0.422)
+c15_sin <- data.frame(i = 1:323, hac = 0)
+hac15 <- rbind(c15_critico, c15_moderado, c15_sin)
+c15<-c15%>%cbind(hac15)%>%
+  select(id, hac)
+rm(c15_critico,c15_moderado, c15_sin, hac15)
+#Junto los valores de todas las comunas
+hacinamiento<- rbind(c1, c2, c3, c4, c5,
+                                 c6, c7, c8, c9, c10,
+                                 c11, c12, c13, c14, c15)
+
+#Me quedo con los valores por hogar
+#Incorporo hacinamiento por hogar al indice
+Sumatoria <- Sumatoria %>% 
+                  inner_join(hacinamiento, "id")
+rm(c1, c2, c3, c4, c5,c6, c7, c8, c9, c10,c11, c12, c13, c14, c15, hacinamiento)
+
+```
+
+
+*5.CALCULAMOS INDICES*
+```{r}
+Construccion_indice <-Sumatoria %>% 
+  mutate(ind_dominio= dominio,
+         ind_depend = if_else(grado_dependencia == "Alta carga de dependencia por ocupado",
+                                                  0.25,
+                                                  0.00),
+         ind_ingresos = if_else(Sin_ingresos == 1,
+                                              0.15,
+                                              0.00),
+         ind_salud = if_else(Sin_cobertura == 1,
+                                              0.15,
+                                              0.00),
+         ind_edu = case_when(
+           educacion < 7 ~ 0.25,
+           educacion >= 7 & educacion < 12 ~ 0.10,
+           educacion >= 12 ~ 0)
+         )
+
+Construccion_indice<-Construccion_indice[,c(1,2,16:21)]%>%
+  rename(comuna="comuna.x")
+```
+
+*5.1 UNIFICAMOS Y AGRUPAMOS *
+```{r}
+ivs<-Construccion_indice%>%mutate(ind_total=sum(c(ind_dominio,ind_depend,ind_ingresos,
+                                                  ind_salud,ind_edu)))
+
+ivs_x_comuna<-ivs%>%group_by(comuna)%>%
+  summarise(media=mean(ind_total, na.rm = TRUE),
+            varianza=var(ind_total, na.rm = TRUE),
+            desvio=sd(ind_total, na.rm = TRUE),
+            mediana=median(ind_total, na.rm=TRUE))
+
+ivs<-ivs%>%mutate(Zona=case_when(
+  comuna== "2" ~ "Norte",
+  comuna== "13" ~ "Norte",
+  comuna== "14" ~ "Norte",
+  comuna== "4" ~ "Sur",
+  comuna== "8" ~ "Sur",
+  comuna== "9" ~ "Oeste",
+  comuna== "10" ~ "Oeste",
+  comuna== "1" ~ "Centro",
+  comuna== "3" ~ "Centro",
+  comuna== "5" ~ "Centro",
+  comuna== "6" ~ "Centro",
+  comuna== "7" ~ "Centro",
+  comuna== "11" ~ "Oeste",
+  comuna== "12" ~ "Centro",
+  comuna== "15" ~ "Centro"
+))
+
+ivs_x_zona<-ivs%>%group_by(Zona)%>%
+  summarise(media=mean(ind_total, na.rm = TRUE),
+            varianza=var(ind_total, na.rm = TRUE),
+            desvio=sd(ind_total, na.rm = TRUE),
+            mediana=median(ind_total, na.rm=TRUE))
+```
+
+*6-MAPA *
+```{r}
+caba<-st_read("https://cdn.buenosaires.gob.ar/datosabiertos/datasets/comunas/CABA_comunas.geojson")
+caba <- caba%>%
+          rename(comuna=COMUNAS)%>%
+          select(comuna, geometry)
+caba$comuna<-as.numeric(caba$comuna)
+head(caba)
+
+
+ivs_x_comuna$comuna <- as.numeric(ivs_x_comuna$comuna)
+head(ivs_x_comuna)
+
+sf::sf_use_s2(FALSE)
+
+ivs_x_comuna <-left_join(x=caba, y=ivs_x_comuna)
+ivs_x_comuna<-ivs_x_comuna%>%
+                            mutate(centroide=st_centroid(geometry))
+
+#Mapeo
+plot_media<-ggplot()+
+  geom_sf(data=ivs_x_comuna, 
+          aes(fill=media))+
+  scale_fill_viridis_b()
+plot_media
+
+plot_sd<-ggplot()+
+  geom_sf(data=ivs_x_comuna, 
+          aes(fill=desvio))+
+  scale_fill_viridis_b()
+plot_sd
+
+
+```
+
+
+* 7.BOXPLOT *
+```{r}
+box<-ggplot()+
+  geom_boxplot(data=ivs, aes(x=as.character(comuna), y=ind_total),
+               outlier.colour="black", outlier.shape=16,
+             outlier.size=1, notch=FALSE)+
+  coord_flip()+
+  scale_y_continuous(limits = c(0,0.2))+
+box+geom_point(data=ivs_x_comuna, aes(x=as.numeric(media), y=as.character(comuna)))
+
+
+
+  
+
+
+ivs<-ivs%>%mutate(zona=case_when(
+  comuna== "2" ~ "Norte",
+  comuna== "13" ~ "Norte",
+  comuna== "14" ~ "Norte",
+  comuna== "4" ~ "Sur",
+  comuna== "8" ~ "Sur",
+  comuna== "9" ~ "Oeste",
+  comuna== "10" ~ "Oeste",
+  comuna== "1" ~ "Este",
+  comuna== "3" ~ "Este",
+  comuna== "5" ~ "Centro",
+  comuna== "6" ~ "Centro",
+  comuna== "7" ~ "Centro",
+  comuna== "11" ~ "Oeste",
+  comuna== "12" ~ "Norte",
+  comuna== "15" ~ "Centro"
+))
+
+violin<-ggplot(data= ivs, aes(x=as.character(comuna), y=ind_total, fill=zona))+
+  geom_violin()
+violin
+library(ggsci)
+theme_set(theme_minimal())
+
+  
+
+
+ivs$comuna<-as.character(ivs$comuna)
+
+S<-ggplot(data= ivs%>%filter(zona=="Sur"), aes(fill=comuna,y=ind_total, x=as.character(comuna)))+
+  geom_violin(alpha=0.5)+
+  scale_fill_ucscgb()+
+  theme(legend.position = "none")
+S
+N<-ggplot(data= ivs%>%filter(zona=="Norte"), aes(fill=comuna,y=ind_total, x=as.character(comuna)))+
+  geom_violin(alpha=0.5)+
+  scale_fill_ucscgb()+
+  theme(legend.position = "none")
+
+E<-ggplot(data= ivs%>%filter(zona=="Este"), aes(fill=comuna,y=ind_total, x=as.character(comuna)))+
+  geom_violin(alpha=0.5)+
+  scale_fill_ucscgb()+
+  theme(legend.position = "none")
+
+O<-ggplot(data= ivs%>%filter(zona=="Oeste"), aes(fill=comuna,y=ind_total, x=as.character(comuna)))+
+  geom_violin(alpha=0.5)+
+  scale_fill_ucscgb()+
+  theme(legend.position = "none")
+O
+C<-ggplot(data= ivs%>%filter(zona=="Centro"), aes(fill=comuna,y=ind_total, x=as.character(comuna)))+
+  geom_violin(alpha=0.5)+
+  scale_fill_ucscgb()+
+  theme(legend.position = "none")
+C
+library(gridExtra)
+grid.arrange(C,N,S,E,O, ncol=3, nrow=2)
+
+```
+
+```{r}
+boxplot(ivs$ind_dominio, ivs$ind_edu, ivs$ind_edu)
+```
+
+```{r}
+write.csv(ivs, file="ivs.csv", fileEncoding = "UTF-8")
+sf::st_write(ivs_x_comuna, dsn = "ivs_comuna.shp")
+```
+
