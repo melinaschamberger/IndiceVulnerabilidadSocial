@@ -24,7 +24,7 @@ Salud %<>% group_by(comuna) %>%
                                     comuna %in% c(3,5:6) ~ "Centro",
                                     comuna %in% c(10:12) ~ "Oeste"
                                       ))
-                                    
+                                   
 #Grafico
 Barras <- Salud %>%
   group_by(comuna) %>% 
@@ -108,17 +108,28 @@ theme_custom_map <- function(base_size = 11,
 
 #mapa
 
-ggplot() +
-  geom_sf(data=Salud, aes(fill=media))
+mapa <- ggplot() + 
+  geom_sf(data=Salud, aes(fill=zona)) +
+  scale_fill_manual(values = c("#219ebc", "#023047", "#ffb703", "#fb8500")) +
+  geom_text(data = Salud, aes(x = long, y = lat, label = comuna), size = 3) +
+  labs(fill = "Zona",
+       x = " ", 
+       y = " ") +
+  theme_custom_map() +
+  theme(title = element_text(size=10, face = "bold"),
+        plot.subtitle = element_text(size = 8), 
+        plot.caption = element_text(size = 7, hjust = 1),
+        plot.caption.position = "panel", 
+        legend.position = "bottom")
 
 # Código
 
 media_salud<-ggplot() +
-              geom_sf(data=mapa_simple, aes(fill=media)) +
+              geom_sf(data=Salud, aes(fill=media)) +
               theme_custom_map() +
               geom_sf(color = "black", size = 0.1) +
               scale_fill_gradientn (colours = rev(grDevices::heat.colors(10)), name = NULL) +
-              geom_text(data = mapa_simple, aes(x = long, y = lat, label = comuna), size = 3) +
+              geom_text(data = Salud, aes(x = long, y = lat, label = comuna), size = 3) +
               labs(title = "Distribución de hogares según índice de vulnerabilidad en salud",
                    subtitle = "CABA, 2019",
                    caption = "Fuente: elaborado en base a datos de EPH (2019).") +
